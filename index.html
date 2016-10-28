@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>C5 by wangfakang</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">C5</h1>
+        <p class="header">simulation of the gdb backtrace</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/wangfakang/c5/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/wangfakang/c5/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/wangfakang/c5">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/wangfakang">wangfakang</a></p>
+
+
+      </header>
+      <section>
+        <h1>
+<a id="如何通过函数的地址获取到函数的名字" class="anchor" href="#%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87%E5%87%BD%E6%95%B0%E7%9A%84%E5%9C%B0%E5%9D%80%E8%8E%B7%E5%8F%96%E5%88%B0%E5%87%BD%E6%95%B0%E7%9A%84%E5%90%8D%E5%AD%97" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>如何通过函数的地址获取到函数的名字</h1>
+
+<div class="highlight highlight-source-c"><pre>#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>stdio.h<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>execinfo.h<span class="pl-pds">&gt;</span></span>
+
+<span class="pl-k">void</span> <span class="pl-en">my_name_is_fucking</span>(<span class="pl-k">void</span>) {
+    <span class="pl-c1">printf</span>(<span class="pl-s"><span class="pl-pds">"</span>fucking<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>);
+}
+
+<span class="pl-k">int</span> <span class="pl-en">main</span>(<span class="pl-k">int</span> argc, <span class="pl-k">char</span> *argv[]) {
+    <span class="pl-k">void</span>    *funptr = &amp;my_name_is_fucking;
+
+    <span class="pl-c1">backtrace_symbols_fd</span>(&amp;funptr, <span class="pl-c1">1</span>, <span class="pl-c1">1</span>);
+
+    <span class="pl-k">return</span> <span class="pl-c1">0</span>;
+}</pre></div>
+
+<p>通过gcc编译的时候增加<code>-rdynamic</code>编译选项，该编译选项的含义是：使得程序中的共享库的全局符号可用</p>
+
+<h1>
+<a id="如何打印出一个程序的函数调用链路" class="anchor" href="#%E5%A6%82%E4%BD%95%E6%89%93%E5%8D%B0%E5%87%BA%E4%B8%80%E4%B8%AA%E7%A8%8B%E5%BA%8F%E7%9A%84%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E9%93%BE%E8%B7%AF" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>如何打印出一个程序的函数调用链路</h1>
+
+<div class="highlight highlight-source-c"><pre>#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>stdio.h<span class="pl-pds">&gt;</span></span>
+
+
+#<span class="pl-k">define</span> <span class="pl-en">debug_print</span>(<span class="pl-v">fmt, args...</span>) <span class="pl-k">do</span> { \
+            <span class="pl-c1">fprintf</span>(stderr, fmt, ##args); \
+        }<span class="pl-k">while</span>(<span class="pl-c1">0</span>)
+
+
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_exit</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) __attribute__((no_instrument_function));
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_enter</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) __attribute__((no_instrument_function));
+
+
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_enter</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) {
+    <span class="pl-c1">debug_print</span>(<span class="pl-s"><span class="pl-pds">"</span>Entering <span class="pl-c1">%p</span> in <span class="pl-c1">%p</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>, callee, callsite);
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_exit</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) {
+    <span class="pl-c1">debug_print</span>(<span class="pl-s"><span class="pl-pds">"</span>Exiting <span class="pl-c1">%p</span> in <span class="pl-c1">%p</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>, callee, callsite);
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo4</span>() {
+    <span class="pl-c1">printf</span>(<span class="pl-s"><span class="pl-pds">"</span>foo()<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>);
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo3</span>() {
+    <span class="pl-c1">foo4</span>();
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo2</span>() {
+    <span class="pl-c1">foo3</span>();
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo1</span>() {
+    <span class="pl-c1">foo2</span>();
+}
+
+
+<span class="pl-k">int</span> <span class="pl-en">main</span>() {
+    <span class="pl-c1">foo1</span>();
+    <span class="pl-k">return</span> <span class="pl-c1">0</span>;
+}</pre></div>
+
+<p>打印程序的调用链路，主要是利用到<code>__attribute__</code>可以用来设置 <a href="http://gcc.gnu.org/onlinedocs/gcc-4.0.0/gcc/Function-Attributes.html">Function-Attributes</a>函数属性
+我们使用的是：<code>no_instrument_function</code>这个函数属性，在gcc编译的时候加上：<code>-finstrument-functions</code>编译选项就会在每一个用户自定义函数中添加下面两个函数调用:</p>
+
+<div class="highlight highlight-source-c"><pre><span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_enter</span>(<span class="pl-k">void</span> *this, <span class="pl-k">void</span> *callsite);
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_exit</span>(<span class="pl-k">void</span> *this, <span class="pl-k">void</span> *callsite);</pre></div>
+
+<p>这两个函数我们用户可以自己实现，其中<code>this</code>指针指向当前函数的地址，<code>callsite</code>是指向上一级调用函数的地址</p>
+
+<h1>
+<a id="综合前面两个问题就可以打印出一个完整的程序调用堆栈信息---" class="anchor" href="#%E7%BB%BC%E5%90%88%E5%89%8D%E9%9D%A2%E4%B8%A4%E4%B8%AA%E9%97%AE%E9%A2%98%E5%B0%B1%E5%8F%AF%E4%BB%A5%E6%89%93%E5%8D%B0%E5%87%BA%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84%E7%A8%8B%E5%BA%8F%E8%B0%83%E7%94%A8%E5%A0%86%E6%A0%88%E4%BF%A1%E6%81%AF---" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>综合前面两个问题就可以打印出一个完整的程序调用堆栈信息   </h1>
+
+<p><code>trace_func.c</code></p>
+
+<div class="highlight highlight-source-c"><pre>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>stdio.h<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>malloc.h<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>execinfo.h<span class="pl-pds">&gt;</span></span>
+
+
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_exit</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) __attribute__((no_instrument_function));
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_enter</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) __attribute__((no_instrument_function));
+
+
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_enter</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) {
+    <span class="pl-k">void</span>    *funptr = callee;
+    <span class="pl-k">char</span> **p = <span class="pl-c1">backtrace_symbols</span>(&amp;funptr, <span class="pl-c1">1</span>);
+    <span class="pl-c1">printf</span>(<span class="pl-s"><span class="pl-pds">"</span>Entering: <span class="pl-c1">%s</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>, *p);
+    <span class="pl-c1">free</span>(p);
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">__cyg_profile_func_exit</span>(<span class="pl-k">void</span>* callee, <span class="pl-k">void</span>* callsite) {
+    <span class="pl-k">void</span>    *funptr = callee;
+    <span class="pl-k">char</span> **p = <span class="pl-c1">backtrace_symbols</span>(&amp;funptr, <span class="pl-c1">1</span>);
+    <span class="pl-c1">printf</span>(<span class="pl-s"><span class="pl-pds">"</span>Exiting: <span class="pl-c1">%s</span><span class="pl-cce">\n</span><span class="pl-pds">"</span></span>, *p);
+    <span class="pl-c1">free</span>(p);
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo4</span>() {
+    <span class="pl-c1">printf</span>(<span class="pl-s"><span class="pl-pds">"</span>foo()<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>);
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo3</span>() {
+    <span class="pl-c1">foo4</span>();
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo2</span>() {
+    <span class="pl-c1">foo3</span>();
+}
+
+
+<span class="pl-k">void</span> <span class="pl-en">foo1</span>() {
+    <span class="pl-c1">foo2</span>();
+}
+
+
+<span class="pl-k">int</span> <span class="pl-en">main</span>() {
+    <span class="pl-c1">foo1</span>();
+    <span class="pl-k">return</span> <span class="pl-c1">0</span>;
+}</pre></div>
+
+<p><code>gcc trace_func.c -rdynamic -finstrument-functions</code></p>
+
+<p>最终就会输出：</p>
+
+<pre><code>Entering: ./a.out(main+0) [0x400a32]
+Entering: ./a.out(foo1+0) [0x400a06]
+Entering: ./a.out(foo2+0) [0x4009da]
+Entering: ./a.out(foo3+0) [0x4009ae]
+Entering: ./a.out(foo4+0) [0x400982]
+foo()
+Exiting: ./a.out(foo4+0) [0x400982]
+Exiting: ./a.out(foo3+0) [0x4009ae]
+Exiting: ./a.out(foo2+0) [0x4009da]
+Exiting: ./a.out(foo1+0) [0x400a06]
+Exiting: ./a.out(main+0) [0x400a32]
+
+</code></pre>
+
+<h1>
+<a id="欢迎一起交流学习-" class="anchor" href="#%E6%AC%A2%E8%BF%8E%E4%B8%80%E8%B5%B7%E4%BA%A4%E6%B5%81%E5%AD%A6%E4%B9%A0-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>欢迎一起交流学习 </h1>
+
+<p>在使用中有任何问题，欢迎反馈给我，可以用以下联系方式跟我交流</p>
+
+<ul>
+<li>邮件(1031379296#qq.com, 把#换成@)</li>
+<li>QQ: 1031379296</li>
+<li>weibo: <a href="http://weibo.com/u/2786211992/home">@王发康</a>
+</li>
+</ul>
+
+<h1>
+<a id="thx" class="anchor" href="#thx" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Thx</h1>
+
+<ul>
+<li>chunshengsterATgmail.com</li>
+</ul>
+
+<h1>
+<a id="author" class="anchor" href="#author" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Author</h1>
+
+<ul>
+<li>Linux\nginx\golang\c\c++爱好者</li>
+<li>欢迎一起交流  一起学习# </li>
+<li>Others say good and Others good</li>
+</ul>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>
